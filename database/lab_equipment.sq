@@ -1,0 +1,126 @@
+-- Create database
+CREATE DATABASE IF NOT EXISTS lab_equipment_db;
+USE lab_equipment_db;
+
+-- Users table
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('system_admin', 'lab_assistant', 'department_head', 'user', 'store_manager') NOT NULL,
+    full_name VARCHAR(100),
+    department VARCHAR(100),
+    phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Laboratories table
+CREATE TABLE laboratories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    lab_name VARCHAR(100) NOT NULL,
+    location VARCHAR(200),
+    capacity INT,
+    department VARCHAR(100),
+    is_available BOOLEAN DEFAULT TRUE
+);
+
+-- Equipment table
+CREATE TABLE equipment (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    category VARCHAR(50),
+    serial_number VARCHAR(100) UNIQUE,
+    lab_id INT,
+    status ENUM('available', 'checked_out', 'maintenance', 'reserved', 'damaged') DEFAULT 'available',
+    purchase_date DATE,
+    last_maintenance DATE,
+    next_maintenance DATE,
+    FOREIGN KEY (lab_id) REFERENCES laboratories(id)
+);
+
+-- Booking requests table
+CREATE TABLE booking_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    equipment_id INT,
+    booking_date DATE NOT NULL,
+    return_date DATE NOT NULL,
+    purpose TEXT,
+    status ENUM('pending', 'approved', 'rejected', 'completed', 'cancelled') DEFAULT 'pending',
+    approved_by INT,
+    approved_date DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id),
+    FOREIGN KEY (approved_by) REFERENCES users(id)
+);
+
+-- Maintenance reports table
+CREATE TABLE maintenance_reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_id INT,
+    reported_by INT,
+    issue_description TEXT NOT NULL,
+    priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    status ENUM('reported', 'in_progress', 'completed', 'cancelled') DEFAULT 'reported',
+    reported_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_by INT,
+    completed_date DATETIME,
+    solution_details TEXT,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id),
+    FOREIGN KEY (reported_by) REFERENCES users(id),
+    FOREIGN KEY (completed_by) REFERENCES users(id)
+);
+
+-- Check in/out log
+CREATE TABLE equipment_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_id INT,
+    user_id INT,
+    action ENUM('check_out', 'check_in', 'reserve', 'release') NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Audit trail table
+CREATE TABLE audit_trail (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(200) NOT NULL,
+    table_name VARCHAR(50),
+    record_id INT,
+    old_values TEXT,
+    new_values TEXT,
+    ip_address VARCHAR(45),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Insert default admin user (password: admin123)
+INSERT INTO users (username, email, password, role, full_name, department) VALUES
+('admin', 'admin@injibara.edu.et', '$2y$10$YourHashedPasswordHere', 'system_admin', 'System Administrator', 'Administration'),
+('labassist1', 'labassist@injibara.edu.et', '$2y$10$YourHashedPasswordHere', 'lab_assistant', 'Lab Assistant', 'Computer Science'),
+('depthead', 'depthead@injibara.edu.et', '$2y$10$YourHashedPasswordHere', 'department_head', 'Department Head', 'Computer Science'),
+('student1', 'student@injibara.edu.et', '$2y$10$YourHashedPasswordHere', 'user', 'Test Student', 'Computer Science'),
+('storemanager', 'store@injibara.edu.et', '$2y$10$YourHashedPasswordHere', 'store_manager', 'Store Manager', 'Inventory');
+
+-- Insert sample laboratories
+INSERT INTO laboratories (lab_name, location, department, capacity) VALUES
+('Software Lab 1', 'Main Building, Room 101', 'Computer Science', 30),
+('Hardware Lab', 'Main Building, Room 102', 'Computer Science', 25),
+('Research Lab', 'Science Building, Room 201', 'Computer Science', 20),
+('Network Lab', 'ICT Building, Room 301', 'Computer Science', 35);
+
+-- Insert sample equipment
+INSERT INTO equipment (equipment_name, description, category, serial_number, lab_id, status) VALUES
+('Laptop Dell XPS 15', 'High-performance laptop for development', 'Computer', 'DLXPS001', 1, 'available'),
+('Oscilloscope Tektronix', 'Digital oscilloscope 100MHz', 'Electronic', 'TEK001', 2, 'available'),
+('Arduino Starter Kit', 'Complete Arduino learning kit', 'Microcontroller', 'ARD001', 1, 'available'),
+('Network Analyzer', 'Cisco network analyzer', 'Networking', 'CIS001', 4, 'available'),
+('3D Printer', 'Creality Ender 3 Pro', 'Fabrication', 'CRE001', 3, 'maintenance'),
+('Server Rack', 'Dell PowerEdge Server', 'Server', 'DEL001', 4, 'available');
